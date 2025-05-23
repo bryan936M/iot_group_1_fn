@@ -188,7 +188,7 @@ export default function RealTimeDashboard(): React.ReactElement {
       <header className="bg-white shadow">
         <div className="container mx-auto px-4 py-6 flex items-center justify-between">
           <h3 className="text-xl font-semibold text-gray-900">
-            Real-Time Data
+            Real-Time Sensor Data
           </h3>
           <div
             className={`text-sm font-medium ${
