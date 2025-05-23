@@ -3,6 +3,7 @@ import React, { useEffect, useRef, useState } from "react";
 import { Chart, registerables } from "chart.js";
 import type { ChartConfiguration } from "chart.js";
 import "chartjs-adapter-date-fns";
+
 import io from "socket.io-client";
 import type { Socket } from "socket.io-client";
 
@@ -36,6 +37,7 @@ const METRICS: Metric[] = [
 
 type UpdateDataPayload = {
   data: Array<[number, ...number[], number]>;
+  predictions: number[]; // Array of predicted viscosity values
   // tuple: [ignored?, metric1, metric2, ..., timestamp]
 };
 
@@ -43,6 +45,10 @@ export default function RealTimeDashboard(): React.ReactElement {
   const [status, setStatus] = useState<
     "Connecting..." | "Connected" | "Disconnected"
   >("Connecting...");
+  const [predictions, setPredictions] = useState<number[]>([]);
+  const [actualData, setActualData] = useState<
+    Array<[number, ...number[], number]>
+  >([]);
   const chartRefs = useRef<Array<HTMLCanvasElement | null>>(
     METRICS.map(() => null)
   );
@@ -142,8 +148,13 @@ export default function RealTimeDashboard(): React.ReactElement {
 
     socket.on("update_data", (payload: UpdateDataPayload) => {
       const rows = payload.data.slice().reverse();
+      const preds = payload.predictions.slice().reverse();
+
+      setActualData(rows);
+      setPredictions(preds);
 
       console.log(rows);
+      console.log(preds);
 
       // Clear old data
       charts.current.forEach((c) => {
@@ -207,6 +218,115 @@ export default function RealTimeDashboard(): React.ReactElement {
           ))}
         </div>
       </main>
+
+      {/* Predictions Table */}
+      <div className="container mx-auto px-4 py-6">
+        <div className="bg-white rounded-lg shadow overflow-hidden">
+          <div className="px-4 py-5 sm:px-6">
+            <h3 className="text-lg font-medium leading-6 text-gray-900">
+              Predictions vs Actual Values
+            </h3>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th
+                    scope="col"
+                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                  >
+                    Timestamp
+                  </th>
+                  <th
+                    scope="col"
+                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                  >
+                    Predicted Viscosity
+                  </th>
+                  <th
+                    scope="col"
+                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                  >
+                    Actual Milk Quality
+                  </th>
+                  <th
+                    scope="col"
+                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                  >
+                    Predicted Milk Quality
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {actualData.map((row, rowIndex) => {
+                  const timestamp = new Date(
+                    row[row.length - 1]
+                  ).toLocaleTimeString();
+                  const predictedViscosity = predictions[rowIndex];
+                  const actualViscosity = Number(row[4]); // Viscosity is the 5th metric (index 3)
+                  const difference =
+                    predictedViscosity !== undefined
+                      ? Math.abs(actualViscosity - predictedViscosity)
+                      : null;
+
+                  return (
+                    <tr
+                      key={rowIndex}
+                      className={rowIndex % 2 === 0 ? "bg-white" : "bg-gray-50"}
+                    >
+                      {/* Timestamp */}
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                        {timestamp}
+                      </td>
+                      {/* Actual Viscosity */}
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        <div className="flex flex-col">
+                          <span>
+                            Actual Viscosity: {actualViscosity.toFixed(2)}
+                          </span>
+                          {predictedViscosity !== undefined && (
+                            <>
+                              <span className="text-gray-400">
+                                Predicted Viscosity:{" "}
+                                {predictedViscosity.toFixed(2)}
+                              </span>
+                              <span
+                                className={`text-xs ${
+                                  difference && difference > 1
+                                    ? "text-red-500"
+                                    : "text-green-500"
+                                }`}
+                              >
+                                Difference: {difference?.toFixed(2)}
+                              </span>
+                            </>
+                          )}
+                        </div>
+                      </td>
+                      {/* Actual Milk Quality */}
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {actualViscosity &&
+                        actualViscosity > 1.5 &&
+                        actualViscosity < 2.0
+                          ? "Good Milk"
+                          : "Bad Milk"}
+                      </td>
+                      {/* Predicted Milk Quality */}
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {predictedViscosity &&
+                        predictedViscosity > 1.5 &&
+                        predictedViscosity < 2.0
+                          ? "Good Milk"
+                          : "Bad Milk"}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

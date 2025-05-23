@@ -40,6 +40,9 @@ const PredictionForm = () => {
 
   return (
     <div className="max-w-md mx-auto p-6">
+      <h3 className="text-xl font-semibold text-gray-900 mb-4">
+        Prediction Form
+      </h3>
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
           <label
@@ -89,7 +92,13 @@ const PredictionForm = () => {
           <h3 className="text-lg font-medium text-gray-900">
             Prediction Result:
           </h3>
-          <p className="mt-2 text-sm text-gray-600">{prediction}</p>
+          <p className="mt-2 text-sm text-gray-600">
+            Predicted Viscosity: {prediction}
+          </p>
+          <p className="mt-2 text-sm text-gray-600">
+            Predicted Milk Quality:{" "}
+            {prediction > 1.5 && prediction < 2.0 ? "Good Milk" : "Bad Milk"}
+          </p>
         </div>
       )}
     </div>
